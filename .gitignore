@@ -1,0 +1,41 @@
+# Ignore Go build outputs
+/build
+*.exe
+*.out
+*.test
+
+# Ignore certificates and secrets
+certs/
+*.key
+*.crt
+
+# Ignore local registry data
+local-registry/
+
+# Ignore Podman and Docker files
+podman.log
+*.pid
+
+# Ignore Go modules and dependencies
+vendor/
+go.sum
+
+# Ignore temporary files and directories
+*.tmp
+*.log
+.DS_Store
+
+# Ignore editor and IDE files
+.idea/
+.vscode/
+*.swp
+*.sublime-project
+*.sublime-workspace
+
+# Ignore Makefile generated binaries
+tmp
+server
+
+# Ignore YAML deployment artifacts
+*.yaml~
+vmware-vix-disklib-distrib.tar.gz

@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Pod
+metadata:
+  name: vddk-builder-pod
+  labels:
+    app: vddk-builder
+spec:
+  serviceAccountName: default  # Use the default service account
+  containers:
+    - name: vddk-builder
+      image: quay.io/yaacov/vddk-builder:latest
+      ports:
+        - containerPort: 8443
+      env:
+        - name: IMAGE_NAME
+          value: "vddk"
+        - name: IMAGE_REGISTRY
+          value: "image-registry.openshift-image-registry.svc:5000"
+        - name: CA_PUBLIC_KEY
+          value: "/etc/tls/tls.crt"
+        - name: PRIVATE_KEY
+          value: "/etc/tls/tls.key"
+      volumeMounts:
+        - name: tls-certs
+          mountPath: /etc/tls
+          readOnly: true
+  volumes:
+    - name: tls-certs
+      secret:
+        secretName: vddk-builder-service-tls
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vddk-builder-service
+  labels:
+    app: vddk-builder
+  annotations:
+    service.beta.openshift.io/serving-cert-secret-name: vddk-builder-service-tls
+spec:
+  selector:
+    app: vddk-builder
+  ports:
+    - protocol: TCP
+      port: 8443
+      targetPort: 8443
+  type: ClusterIP
