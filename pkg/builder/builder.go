@@ -5,11 +5,14 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"vddk-builder/pkg/config"
 )
+
+const dirPerm = 0755
 
 // extractTarGz extracts a .tar.gz file to a destination directory
 func extractTarGz(src, dest string) error {
@@ -57,36 +60,36 @@ func extractTarGz(src, dest string) error {
 	return nil
 }
 
-func BuildAndPushImage(cfg *config.Config, filePath string, imageName string) {
-	// Create ./tmp directory for temporary files
+// BuildAndPushImage is the exported method to handle the entire process
+func BuildAndPushImage(cfg *config.Config, filePath, imageName string) {
 	tmpDir := filepath.Join(".", "tmp")
-	if err := os.MkdirAll(tmpDir, 0755); err != nil {
-		fmt.Printf("Failed to create temporary directory: %v\n", err)
+	if err := os.MkdirAll(tmpDir, dirPerm); err != nil {
+		log.Printf("Failed to create temporary directory: %v\n", err)
 		return
 	}
 
 	// Define the extracted directory under tmp
 	extractedDir := filepath.Join(tmpDir, "extracted")
-	if err := os.MkdirAll(extractedDir, 0755); err != nil {
-		fmt.Printf("Failed to create extraction directory: %v\n", err)
+	if err := os.MkdirAll(extractedDir, dirPerm); err != nil {
+		log.Printf("Failed to create extraction directory: %v\n", err)
 		return
 	}
 
 	// Defer cleanup for extractedDir and tar.gz file
 	defer func() {
-		fmt.Println("Cleaning up...")
+		log.Println("Cleaning up...")
 		if err := os.RemoveAll(extractedDir); err != nil {
-			fmt.Printf("Failed to remove extracted directory: %v\n", err)
+			log.Printf("Failed to remove extracted directory: %v\n", err)
 		}
 		if err := os.Remove(filePath); err != nil {
-			fmt.Printf("Failed to remove tar.gz file: %v\n", err)
+			log.Printf("Failed to remove tar.gz file: %v\n", err)
 		}
 	}()
 
 	// Extract the tar.gz file
-	fmt.Println("Extracting uploaded file...")
+	log.Println("Extracting uploaded file...")
 	if err := extractTarGz(filePath, extractedDir); err != nil {
-		fmt.Printf("Failed to extract archive: %v\n", err)
+		log.Printf("Failed to extract archive: %v\n", err)
 		return
 	}
 
@@ -96,23 +99,37 @@ func BuildAndPushImage(cfg *config.Config, filePath string, imageName string) {
 	}
 	imageTag := fmt.Sprintf("%s/%s:latest", cfg.ImageRegistry, imageName)
 
-	// Build the image using podman
-	fmt.Println("Building image...")
-	cmd := exec.Command("podman", "build", "-f", "Containerfile.vddk", "-t", imageTag, extractedDir)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		fmt.Printf("Failed to build image: %v\n%s\n", err, output)
+	// Build the image
+	if err := buildImage(imageTag, extractedDir); err != nil {
+		log.Printf("Failed to build image: %v\n", err)
 		return
 	}
 
-	/// Push the image to the registry
-	fmt.Println("Pushing image...")
+	// Push the image to the registry
+	if err := pushImage(imageTag); err != nil {
+		log.Printf("Failed to push image: %v\n", err)
+		return
+	}
+
+	log.Println("Image build and push completed successfully.")
+}
+
+// buildImage is an internal method to build the image using podman
+func buildImage(imageTag, contextDir string) error {
+	cmd := exec.Command("podman", "build", "-f", "Containerfile.vddk", "-t", imageTag, contextDir)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("build image: %w\n%s", err, output)
+	}
+	return nil
+}
+
+// pushImage is an internal method to push the image to the registry
+func pushImage(imageTag string) error {
 	pushCmd := exec.Command("podman", "push", "--tls-verify=false", imageTag)
 	pushOutput, pushErr := pushCmd.CombinedOutput()
 	if pushErr != nil {
-		fmt.Printf("Failed to push image: %v\n%s\n", pushErr, pushOutput)
-		return
+		return fmt.Errorf("push image: %w\n%s", pushErr, pushOutput)
 	}
-
-	fmt.Println("Image build and push completed successfully.")
+	return nil
 }

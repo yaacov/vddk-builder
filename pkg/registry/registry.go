@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net/http"
 )
@@ -8,7 +9,7 @@ import (
 // CheckImageExists checks if the specified image exists in the registry.
 func CheckImageExists(imageName, registryURL, authToken string) (bool, error) {
 	// Construct the image manifest URL
-	url := fmt.Sprintf("%s/v2/%s/manifests/latest", registryURL, imageName)
+	url := fmt.Sprintf("https://%s/v2/%s/manifests/latest", registryURL, imageName)
 
 	// Create a new HTTP request
 	req, err := http.NewRequest("HEAD", url, nil)
@@ -20,11 +21,15 @@ func CheckImageExists(imageName, registryURL, authToken string) (bool, error) {
 	if authToken != "" {
 		req.Header.Set("Authorization", "Bearer "+authToken)
 	}
-	// Set Accept header to request image manifest
-	req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.v2+json")
+	// Set Accept header to request image manifest, including OCI support
+	req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.v2+json, application/vnd.oci.image.manifest.v1+json")
 
 	// Send the HTTP request
-	client := &http.Client{}
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return false, err
