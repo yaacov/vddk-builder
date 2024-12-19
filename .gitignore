@@ -34,7 +34,6 @@ go.sum
 
 # Ignore Makefile generated binaries
 tmp
-server
 
 # Ignore YAML deployment artifacts
 *.yaml~
