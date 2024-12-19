@@ -141,7 +141,7 @@ func pushImage(imageTag, authToken string) error {
 	// Construct the skopeo command
 	args := []string{"copy", "--dest-tls-verify=false"}
 	if authToken != "" {
-		args = append(args, "--dest-creds", fmt.Sprintf(":%s", authToken))
+		args = append(args, "--dest-registry-token", fmt.Sprintf(":%s", authToken))
 	}
 	args = append(args, fmt.Sprintf("containers-storage:%s", imageTag), fmt.Sprintf("docker://%s", imageTag))
 
