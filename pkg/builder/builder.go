@@ -26,7 +26,8 @@ const dirPerm = 0755
 // - cfg: Configuration object containing image registry and default image name.
 // - filePath: Path to the tar.gz file to be extracted and used for building the image.
 // - imageName: Name of the Docker image to be built. If empty, the default name from the configuration is used.
-func BuildAndPushImage(cfg *config.Config, filePath, imageName string) {
+// - authToken: The authentication token for the registry.
+func BuildAndPushImage(cfg *config.Config, filePath, imageName, authToken string) {
 	tmpDir := filepath.Join(".", "tmp")
 	if err := os.MkdirAll(tmpDir, dirPerm); err != nil {
 		log.Printf("Failed to create temporary directory: %v\n", err)
@@ -71,7 +72,7 @@ func BuildAndPushImage(cfg *config.Config, filePath, imageName string) {
 	}
 
 	// Push the image to the registry
-	if err := pushImage(imageTag); err != nil {
+	if err := pushImage(imageTag, authToken); err != nil {
 		log.Printf("Failed to push image: %v\n", err)
 		return
 	}
@@ -136,8 +137,16 @@ func buildImage(imageTag, contextDir string) error {
 }
 
 // pushImage is an internal method to push the image to the registry
-func pushImage(imageTag string) error {
-	pushCmd := exec.Command("podman", "push", "--tls-verify=false", imageTag)
+func pushImage(imageTag, authToken string) error {
+	// Construct the skopeo command
+	args := []string{"copy", "--dest-tls-verify=false"}
+	if authToken != "" {
+		args = append(args, "--dest-creds", fmt.Sprintf(":%s", authToken))
+	}
+	args = append(args, fmt.Sprintf("containers-storage:%s", imageTag), fmt.Sprintf("docker://%s", imageTag))
+
+	// Use skopeo to push the image to the registry
+	pushCmd := exec.Command("skopeo", args...)
 	pushOutput, pushErr := pushCmd.CombinedOutput()
 	if pushErr != nil {
 		return fmt.Errorf("push image: %w\n%s", pushErr, pushOutput)

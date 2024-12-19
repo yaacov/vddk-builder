@@ -82,6 +82,13 @@ clean:
 	@echo "Cleaning up OpenShift resources..."
 	oc delete -f $(DEPLOY_YAML)
 
+# Format the Go code
+.PHONY: format
+format:
+	@echo "Formatting Go code..."
+	gofmt -s -w .
+	@echo "Go code formatted successfully!"
+
 # Full workflow: build, push, and deploy
 .PHONY: all
 all: build-image push-image deploy
@@ -101,4 +108,5 @@ help:
 	@echo "  push-image          Push the container image to Quay.io"
 	@echo "  deploy              Deploy the server to the OpenShift cluster"
 	@echo "  clean               Remove the deployed OpenShift resources"
+	@echo "  format              Format the Go code"
 	@echo "  all                 Build, push, and deploy the server"

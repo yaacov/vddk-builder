@@ -4,8 +4,9 @@
 This project provides a Go-based HTTPS server that accepts file uploads, builds a container image using the uploaded file, and pushes it to a container registry. It also allows checking if an image already exists in the registry and supports overriding the default image name during upload.
 
 ## Prerequisites
-- Go 1.19+
-- Podman or Docker
+- Go 1.23+
+- Podman
+- Skopeo
 - OpenShift CLI (oc)
 - OpenSSL (for generating certificates)
 

@@ -1,16 +1,18 @@
 package config
 
-import "os"
+import (
+	"os"
+	"strconv"
+)
 
 type Config struct {
 	ImageName     string
 	CAPublicKey   string
 	PrivateKey    string
 	ServerPort    string
-	RegistryUser  string
-	RegistryPass  string
 	UploadDir     string
 	ImageRegistry string
+	RequireAuth   bool
 }
 
 // LoadConfig loads the configuration for the application from environment variables.
@@ -21,6 +23,7 @@ type Config struct {
 // - ServerPort: The port on which the server will run, defaults to "8443" if not set.
 // - UploadDir: The directory where uploads will be stored, defaults to "/tmp/uploads" if not set.
 // - ImageRegistry: The image registry URL, defaults to "image-registry.openshift-image-registry.svc:5000" if not set.
+// - RequireAuth: Whether authentication is required, defaults to false if not set.
 func LoadConfig() *Config {
 	return &Config{
 		ImageName:     getEnv("IMAGE_NAME", "vddk"),
@@ -29,6 +32,7 @@ func LoadConfig() *Config {
 		ServerPort:    getEnv("SERVER_PORT", "8443"),
 		UploadDir:     getEnv("UPLOAD_DIR", "/tmp/uploads"),
 		ImageRegistry: getEnv("IMAGE_REGISTRY", "image-registry.openshift-image-registry.svc:5000"),
+		RequireAuth:   getEnvAsBool("REQUIRE_AUTH", false),
 	}
 }
 
@@ -37,4 +41,16 @@ func getEnv(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func getEnvAsBool(name string, defaultVal bool) bool {
+	valStr := os.Getenv(name)
+	if valStr == "" {
+		return defaultVal
+	}
+	val, err := strconv.ParseBool(valStr)
+	if err != nil {
+		return defaultVal
+	}
+	return val
 }
